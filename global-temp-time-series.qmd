@@ -1,0 +1,224 @@
+---
+title: "Global Warming Accelerating"
+author: "Gaston Sanchez"
+date: "May 10, 2025"
+format: 
+  html:
+    toc: true
+    number-sections: true
+    theme: zephyr
+embed-resources: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+```
+
+```{r pkgs, message = FALSE, echo = FALSE}
+library(tidyverse)    # ecosystem of data science packages
+library(ggiraph)      # to make ggplots interactive
+```
+
+
+# Description
+
+The data visualization of this module is based on the scatter plot that appears 
+in the following New York Times article Raymond Zhong and Nadia Popovich
+
+__Earth Was Due for Another Year of Record Warmth. But This Warm?__
+
+<https://www.nytimes.com/2023/12/26/climate/global-warming-accelerating.html>
+
+![Monthly global temperature compared with average for the 20th century](source/monthly-global-temperature-against-20th-century.png)
+
+\
+
+## Details (datasheet)
+
+- __Topic(s)__: 
+  + Weather 
+  + Climate Change
+  + Global Warming
+  + Temperature
+- __Data__:
+  + Size: medium data
+  + Format: raw data in CSV format
+- __Graphic__:
+  + Type: scatter plot
+  + Styles: ggplot, interactive ggiraph 
+  + Interactive: no
+
+
+## R Packages
+
+```{r pkgs, eval = FALSE}
+```
+
+
+-----
+
+
+# Data
+
+The source of the data is _NOAA Global Time Series_
+
+<https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series>
+
+In particular, time series 1850 - 2024 are available in 3 formats:
+
+- CSV: <https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series/globe/tavg/land_ocean/1/0/1850-2024/data.csv>
+
+- JSON: <https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series/globe/tavg/land_ocean/1/0/1850-2024/data.json>
+
+- XML: <https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series/globe/tavg/land_ocean/1/0/1850-2024/data.xml>
+
+We decided to keep it simple and work with the CSV file. A local copy is in the
+file `global-temp-time-series.csv` stored in the `data/` folder:
+
+```{r}
+# import CSV file
+dat = read_csv(
+  file = "data/global-temp-time-series.csv", 
+  skip = 4, 
+  show_col_types = FALSE)
+```
+
+
+For convenience purposes, we need to add columns `year` and `month`
+
+```{r}
+
+# add year and month columns
+dat = dat |> 
+  mutate(Year = as.numeric(str_sub(Date, start = 1, end = 4)),
+         Month = as.numeric(str_sub(Date, start = 5, end = 6)))
+
+head(dat)
+```
+
+
+-----
+
+
+# Graphics
+
+We go over a series of graphics using `"ggplot2"`, starting with a simple
+version and then gradually adapting the code to get closer to the graphics
+in the NYTimes article.
+
+
+## Graphic 1
+
+The first graphic is just a simple scatter plot just to make sure that we 
+get a visualization that makes sense in terms of general appearance.
+
+```{r}
+# sanity check
+ggplot(dat, aes(x = Year, y = Anomaly)) +
+  geom_hline(yintercept = 0, color = "gray30") +
+  geom_point()
+```
+
+
+## Graphic 2
+
+The first tuning operations involve modifying the `shape` of the points so that
+we can change their `color` (border) and `fill` attributes. To be more precise,
+we map `Anomaly` (temperature) to `fill`. Likewise, we simplify the theme:
+
+```{r}
+ggplot(dat, aes(x = Year, y = Anomaly)) +
+  geom_hline(yintercept = 0, color = "gray30") +
+  geom_point(shape = 21, color = "white", aes(fill = Anomaly)) +
+  theme_minimal()
+```
+
+
+## Graphic 3
+
+A major component of this scatter plot has to do with the color of the points
+using a color gradient palette. For testing purposes, we've decided to explore
+the visual appearance with a viridis scale:
+
+```{r}
+# viridis palette just for testing purposes
+ggplot(dat, aes(x = Year, y = Anomaly)) +
+  geom_hline(yintercept = 0, color = "gray30") +
+  geom_point(shape = 21, color = "white", aes(fill = Anomaly)) +
+  scale_fill_viridis_c() +
+  theme_minimal()
+```
+
+
+## Graphic 4
+
+The target graphic has a gradient scheme that ranges from green-blue to
+orange-brown. One way to customize the `fill` color is with the scale function
+`scale_fill_gradient2()`
+
+```{r}
+ggplot(dat, aes(x = Year, y = Anomaly)) +
+  theme(panel.background = element_blank(),
+        legend.position = "none", 
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(linetype = "dotted", color = "gray50")) +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.3) +
+  geom_point(shape = 21, color = "white", aes(fill = Anomaly)) +
+  scale_fill_gradient2(low = "#41948d", mid = "#f6f7e6", high = "#c75626",
+                       breaks = seq(from = -1, to = 1.5, by = 0.2)) +
+  labs(x = "", y = "") +
+  scale_x_continuous(breaks = c(seq(from = 1850, to = 2000, by = 25), 2024))
+```
+
+
+## Graphic 5
+
+To get a finer gradient scheme, we use `scale_fill_gradientn()` and provide a
+vector of 10 color hues as follows:
+
+```{r}
+ggplot(dat, aes(x = Year, y = Anomaly)) +
+  theme(panel.background = element_blank(),
+        legend.position = "none", 
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(linetype = "dotted", color = "gray50")) +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.3) +
+ geom_point(shape = 21, color = "white", aes(fill = Anomaly)) +
+  scale_fill_gradientn(
+    colors = c("#5bada5", "#86b9b0", "#d9e7dc", "#f4f1e6", "#f7e4d0", 
+               "#f7d2b2", "#f0a66f", "#e88245", "#c75626", "#a62623")) +
+  labs(x = "", y = "") +
+  scale_x_continuous(breaks = c(seq(from = 1850, to = 2000, by = 25), 2024))
+```
+
+
+## Graphic 6
+
+Another less-ideal alternative with by using the function `scale_fill_steps2()`.
+In addition, we include the text annotations, and the rectangular segment to
+highlight a set of 12 points corresponding to the 12 months of year 1973:
+
+```{r}
+# custom color palette with scale_fill_steps2()
+# this is the "good one"
+ggplot(dat, aes(x = Year, y = Anomaly)) +
+  theme(panel.background = element_blank(),
+        legend.position = "none", 
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(linetype = "dotted", color = "gray50")) +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.3) +
+  geom_point(shape = 21, color = "white", aes(fill = Anomaly)) +
+  scale_fill_steps2(low = "turquoise3", mid ="#faf8e6", high = "#f0692b",
+                    midpoint = 0.05, breaks = seq(from = -1, to = 1.5, by = 0.2)) +
+  labs(x = "", y = "") +
+  scale_x_continuous(breaks = c(seq(from = 1850, to = 2000, by = 25), 2024),
+                     position = "top") +
+  geom_rect(xmin = 1972.5, xmax = 1973.5, ymin = 0, ymax = 0.35, 
+            color = "gray30", fill = "#FFFFFF00", linewidth = 0.1) +
+  annotate(geom = "text", x = 1973, y = 0.39, label = "12 months", size = 2) +
+  annotate(geom = "text", x = 1878, y = 0.8, size = 3, hjust = 0,
+           label = "Monthly global temperature compared\nwith average for the 20th century")
+```
+
+
+
