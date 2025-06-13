@@ -23,7 +23,7 @@ library(ggiraph)      # to make ggplots interactive
 # Description
 
 The data visualization of this module is based on the scatter plot that appears 
-in the following New York Times article Raymond Zhong and Nadia Popovich
+in the following New York Times article by Raymond Zhong and Nadia Popovich (Dec. 26, 2023)
 
 __Earth Was Due for Another Year of Record Warmth. But This Warm?__
 
